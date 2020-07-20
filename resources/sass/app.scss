@@ -1,0 +1,39 @@
+@import "~element-ui/lib/theme-chalk/index.css";
+
+// Tailwind
+@tailwind base;
+
+@tailwind components;
+
+@tailwind utilities;
+
+// Fonts
+@import url('https://fonts.googleapis.com/css?family=Nunito');
+
+@import "../js/styles/element-variables";
+
+// Variables
+@import 'variables';
+
+:root {
+    --color-white: #FFFFFF;
+    --color-black: #000000;
+
+    --color-primary: #{$--color-primary};
+}
+
+
+// Bootstrap
+//@import '~bootstrap/scss/bootstrap';
+
+.container{
+    @apply p-5;
+}
+.el-loading-spinner .circular{
+    display: inline;
+}
+.align-text-baseline-middle{
+    vertical-align: middle;
+    vertical-align: -moz-middle-with-baseline;
+    vertical-align: -webkit-baseline-middle
+}
