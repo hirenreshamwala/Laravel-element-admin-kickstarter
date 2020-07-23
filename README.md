@@ -14,8 +14,6 @@
 3. [Requirements](#requirements)
 4. [Installation & Configuration](#installation-and-configuration)
 5. [License](#license)
-6. [Security Vulnerabilities](#security-vulnerabilities)
-7. [Miscellaneous](#miscellaneous)
 
 ### Introduction
 
@@ -89,7 +87,7 @@ php artisan serve
 
 **How to log in as admin:**
 
-> *http(s)://example.com/admin/login*
+> *http(s)://example.com/admin/*
 
 ~~~
 email:admin@example.com
