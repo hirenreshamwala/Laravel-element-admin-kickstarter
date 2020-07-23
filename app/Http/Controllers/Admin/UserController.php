@@ -2,65 +2,42 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\User\StoreUserRequest;
+use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\User;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Input;
-use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
+use Webpatser\Uuid\Uuid;
+use Exception;
 
-class UserController extends Controller
+class UserController extends CommonController
 {
-    public $roles;
-
-    public function __construct()
-    {
-        $this->roles = array_values(array_diff( Role::all()->pluck('name')->toArray(), ['Super Admin','Customer'] ));
-    }
-
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\Resources\Json\JsonResource
      */
     public function index(Request $request)
     {
-
-
         $pageNumber = $request->input('page', 1);
         $noOfRows = $request->input('rows', 20);
-        $sort_by = $request->input('sort', 'id');
-        $sort_order = $request->input('order', 'd');
-        $search = $request->input('s');
 
-        if ($sort_by == ''){
-            $sort_by = 'id';
-        }
-        if ($sort_order == ''){
-            $sort_order = 'd';
-        }
-        if ($sort_order == 'a'){
-            $sort_order = 'asc';
-        } else {
-            $sort_order = 'desc';
-        }
-
-        $users = User::role($this->roles)
+        $users = User::doesntHave(['Super Admin','Customer'])
             ->whereNotIn('id',[Auth::user()->id])
-            ->where(function($query ) use ($search)
-            {
-                if($search){
-                    $query->where('email', 'like', '%'.$search.'%')
-                    ->orWhere('name', 'like', '%'.$search.'%');
-                }
+            ->when(request('s'), function ($query) {
+                return $query->where('email', 'like', '%'.request('s').'%')
+                    ->orWhere('name', 'like', '%'.request('s').'%');
             })
-            ->orderBy($sort_by,$sort_order)
+            ->when(request('sort') || request('order'), function ($query) {
+                $sort_by = request('sort', 'id');
+                $sort_order = (request('order', 'd') == 'a') ? 'asc' : 'desc';
+                return $query->orderBy($sort_by,$sort_order);
+            })
             ->paginate($noOfRows,['*'],'page',$pageNumber);
         return UserResource::collection($users);
-
     }
 
     /**
@@ -76,41 +53,15 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param StoreUserRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws Exception
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $userIds = User::role($this->roles)->get()->pluck('id')->toArray();
-        $request->validate([
-            'name'=>'required',
-            'password'=>'required',
-            'email' => [
-                'required',
-                Rule::unique('users', 'email')->whereIn('id', $userIds)
-            ]
-        ]);
-
-        $user = User::where('email','=',$request->email)->orWhere('username',$request->username)->first();
-        if ($user){
-            if ($user->email == $request->email){
-                return array(
-                    'status' => 'error',
-                    'message' => 'Email already exist'
-                );
-            } else if($user->username == $user->username) {
-                return array(
-                    'status' => 'error',
-                    'message' => 'Username already exist'
-                );
-            } else {
-                return array(
-                    'status' => 'error',
-                    'message' => 'User already exist'
-                );
-            }
-        } else {
+        try {
             $user = User::create(array(
+                'external_id'=>Uuid::generate()->string,
                 'name' => $request->name,
                 'username' => $request->username,
                 'email' => $request->email,
@@ -118,11 +69,13 @@ class UserController extends Controller
                 'comment' => $request->comment,
                 'password' => Hash::make($request->password),
             ));
-            $user->assignRole(Input::get('userrole'));
-            return array(
-                'status' => 'success',
-                'message' => 'User created successfully'
-            );
+            $user->assignRole($request->userrole);
+            return $this->responseSuccess(['message'=>'User created successfully']);
+        } catch (\Exception $e){
+            if (config('app.debug')) {
+                throw new \Exception('Exception::: '.$e->getMessage(), 400);
+            }
+            throw new \Exception('Unable to save the data.', 400);
         }
     }
 
@@ -130,18 +83,11 @@ class UserController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return UserResource
      */
     public function show($id)
     {
-        return new UserResource(User::with('roles')->find($id));
-
-//        return User::with('roles')->find($id);
-        return User::with([
-            'roles'  => function ($query) {
-                $query->select(['id', 'name'])->first();
-            }
-        ])->find($id);
+        return new UserResource(User::getByExternalId($id));
     }
 
     /**
@@ -152,51 +98,60 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        return User::with([
-            'roles'  => function ($query) {
-                $query->select(['id', 'name'])->first();
-            }
-        ])->find($id);
+
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @param UpdateUserRequest $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     * @throws Exception
      */
-    public function update(Request $request, $id)
+    public function update($id, UpdateUserRequest $request)
     {
-        $user = User::find($id);
+        $user = User::getByExternalId($id);
         if ($user){
-            $user->name             = Input::get('name');
-            $user->email            = Input::get('email');
-            $user->username         = Input::get('username');
-            $user->contact_number   = Input::get('contact_number');
-            $user->comment          = Input::get('comment');
-            if ($request->password){
-                $user->password          = Hash::make(Input::get('password'));
+            try {
+                DB::transaction(function () use ($user, $request) {
+                    $user->name             = $request->name;
+                    $user->email            = $request->email;
+                    $user->username         = $request->username;
+                    $user->contact_number   = $request->contact_number;
+                    $user->comment          = $request->comment;
+                    if ($request->password){
+                        $user->password          = Hash::make($request->password);
+                    }
+                    $user->roles()->detach();
+                    $user->assignRole($request->userrole);
+                    $user->save();
+                });
+                return $this->responseSuccess(['message'=>'User updated successfully']);
+            } catch (Exception $e){
+                if (config('app.debug')) {
+                    throw new Exception('Exception::: '.$e->getMessage(), 400);
+                }
+                throw new Exception('Unable to save the data.', 400);
             }
-            $user->roles()->detach();
-            $user->assignRole(Input::get('userrole'));
-            $user->save();
         }
-
-        return array(
-            'status' => 'success',
-            'message' => 'User created successfully'
-        );
+        return $this->responseError('User not found', 401);
     }
 
     /**
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id)
     {
-        //
+        $user = User::getByExternalId($id);
+        if ($user){
+            $user->roles()->detach();
+            $user->delete();
+            $this->responseSuccess(['message'=>'User removed successfully']);
+        }
+        return $this->responseError('Invalid customer', 401);
     }
 }

@@ -87,7 +87,6 @@ class Handler extends ExceptionHandler
         } else {
             $statusCode = 500;
         }
-
         $response = [];
 
         switch ($statusCode) {
@@ -104,8 +103,15 @@ class Handler extends ExceptionHandler
                 $response['message'] = 'Method Not Allowed';
                 break;
             case 422:
-                $response['message'] = $exception->original['message'];
-                $response['errors'] = $exception->original['errors'];
+                if ($exception instanceof \Illuminate\Http\JsonResponse){
+                    $exceptionData = $exception->getData();
+                    $response['message'] = $exceptionData->message;
+                    $response['errors'] = (array)$exceptionData->errors;
+                } else {
+                    $response['message'] = $exception->original['message'];
+                    $response['errors'] = $exception->original['errors'];
+                }
+
                 break;
             default:
                 $response['message'] = ($statusCode == 500) ? 'Whoops, looks like something went wrong' : $exception->getMessage();
@@ -113,8 +119,10 @@ class Handler extends ExceptionHandler
         }
 
         if (config('app.debug')) {
-            $response['trace'] = $exception->getTrace();
-            $response['code'] = $exception->getCode();
+            if ( !($exception instanceof \Illuminate\Http\JsonResponse) ){
+                $response['trace'] = $exception->getTrace();
+                $response['code'] = $exception->getCode();
+            }
         }
 
         $response['status'] = $statusCode;

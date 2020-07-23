@@ -41,6 +41,7 @@ class PlanSubscriptionUsage extends Model
      * {@inheritdoc}
      */
     protected $fillable = [
+        'external_id',
         'subscription_id',
         'feature_id',
         'used',

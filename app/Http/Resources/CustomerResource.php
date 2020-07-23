@@ -16,6 +16,7 @@ class CustomerResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'exid' => $this->external_id,
             'name' => $this->name,
             'last_name' => $this->last_name,
             'username' => $this->username,
@@ -29,7 +30,7 @@ class CustomerResource extends JsonResource
             'comment' => $this->comment,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'role' => ($this->roles && isset($this->roles[0])) ? $this->roles[0] : null,
+            'role' => ($this->roles && isset($this->roles[0])) ? new RoleResource($this->roles[0]) : null,
         ];
     }
 }

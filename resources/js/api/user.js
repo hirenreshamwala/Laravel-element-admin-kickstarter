@@ -7,7 +7,39 @@ export function login(data) {
     data
   })
 }
-
+export function fetchUser(id) {
+    return request({
+        url: `/admin/user/${id}`,
+        method: 'get'
+    })
+}
+export function fetchList(query) {
+    return request({
+        url: '/admin/user',
+        method: 'get',
+        params: query
+    })
+}
+export function create(data) {
+    return request({
+        url: '/admin/user',
+        method: 'post',
+        data
+    });
+}
+export function update(id, data) {
+    return request({
+        url: `/admin/user/${id}`,
+        method: 'put',
+        data
+    });
+}
+export function destroy(id) {
+    return request({
+        url: `/admin/user/${id}`,
+        method: 'delete'
+    });
+}
 export function getInfo(token) {
     return new Promise(function(resolve, reject) {
         resolve({

@@ -60,6 +60,7 @@ class PlanFeature extends Model implements Sortable
      * {@inheritdoc}
      */
     protected $fillable = [
+        'external_id',
         'plan_id',
         'slug',
         'name',

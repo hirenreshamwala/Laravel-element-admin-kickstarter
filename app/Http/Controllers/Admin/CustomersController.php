@@ -2,53 +2,43 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Customer\StoreCustomerRequest;
+use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Http\Resources\CustomerResource;
 use App\User;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Input;
 use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
+use Webpatser\Uuid\Uuid;
 
-class CustomersController extends Controller
+class CustomersController extends CommonController
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
     public function index(Request $request)
     {
         $pageNumber = $request->input('page', 1);
         $noOfRows = $request->input('rows', 20);
-        $sort_by = $request->input('sort', 'id');
-        $sort_order = $request->input('order', 'd');
-        $search = $request->input('s');
-
-        if ($sort_by == ''){
-            $sort_by = 'id';
-        }
-        if ($sort_order == ''){
-            $sort_order = 'd';
-        }
-        if ($sort_order == 'a'){
-            $sort_order = 'asc';
-        } else {
-            $sort_order = 'desc';
-        }
 
         $users = User::role('Customer')
-            ->where(function($query ) use ($search)
-            {
-                if($search){
-                    $query->where('email', 'like', '%'.$search.'%')
-                        ->orWhere('name', 'like', '%'.$search.'%');
-                }
+            ->when(request('s'), function ($query) {
+                return $query->where('email', 'like', '%'.request('s').'%')
+                    ->orWhere('name', 'like', '%'.request('s').'%');
             })
-            ->orderBy($sort_by,$sort_order)
+            ->when(request('sort') || request('order'), function ($query) {
+                $sort_by = request('sort', 'id');
+                $sort_order = (request('order', 'd') == 'a') ? 'asc' : 'desc';
+                return $query->orderBy($sort_by,$sort_order);
+            })
             ->paginate($noOfRows,['*'],'page',$pageNumber);
         return CustomerResource::collection($users);
 
@@ -67,25 +57,16 @@ class CustomersController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param StoreCustomerRequest $request
+     * @return JsonResponse
+     * @throws Exception
      */
-    public function store(Request $request)
+    public function store(StoreCustomerRequest $request)
     {
-        $userIds = User::role('Customer')->get()->pluck('id')->toArray();
-
-        $request->validate([
-            'name'=>'required',
-            'password'=>'required',
-            'email' => [
-                'required',
-                Rule::unique('users', 'email')->whereIn('id', $userIds)
-            ]
-        ]);
         try{
-
             DB::transaction(function () use ($request) {
                 $user = User::create(array(
+                    'external_id'=>Uuid::generate()->string,
                     'name' => $request->name,
                     'last_name' => $request->last_name,
                     'username' => $request->email,
@@ -95,33 +76,34 @@ class CustomersController extends Controller
                     'state' => $request->state,
                     'city' => $request->city,
                     'comment' => $request->comment,
-                    'email_verified_at' => date('Y-m-d H:i:s'),
-//                    'register_date' => date('Y-m-d H:i:s'),
+                    'email_verified_at' => Carbon::now(),
                     'password' => Hash::make($request->password),
                 ));
                 $user->assignRole('Customer');
             });
-        } catch (\Exception $e){
+            return $this->responseSuccess(['message'=>'User created successfully']);
+        } catch (Exception $e){
             if (config('app.debug')) {
-                throw new \Exception('Exception::: '.$e->getMessage(), 400);
+                throw new Exception('Exception::: '.$e->getMessage(), 400);
             }
-            throw new \Exception('Unable to save the data.', 400);
+            throw new Exception('Unable to save the data.', 400);
         }
-        return array(
-            'status' => 'success',
-            'message' => 'User created successfully'
-        );
+
     }
 
     /**
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return CustomerResource
      */
     public function show($id)
     {
-        return new CustomerResource(User::role('Customer')->find($id));
+        $user = User::getByExternalId($id);
+        if ($user && $user->hasRole('Customer')){
+            return new CustomerResource($user);
+        }
+        return $this->responseError('Invalid customer', 401);
     }
 
     /**
@@ -138,55 +120,59 @@ class CustomersController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @param UpdateCustomerRequest $request
+     * @param string $id
+     * @return JsonResponse
+     * @throws Exception
      */
-    public function update(User $user, Request $request)
+    public function update($id, UpdateCustomerRequest $request)
     {
-        $userIds = User::role('Customer')->get()->pluck('id')->toArray();
-        $request->validate([
-            'name'=>'required',
-            'email' => [
-                'required',
-                Rule::unique('users', 'email')->whereIn('id', $userIds)->ignore($user->id)
-            ]
-        ]);
-
+        $user = User::getByExternalId($id);
         if ($user){
-            DB::transaction(function () use ($user, $request) {
-                $user->name = Input::get('name');
-                $user->last_name = Input::get('last_name');
-                $user->email = Input::get('email');
-                $user->username = Input::get('email');
-                $user->contact_number = Input::get('contact_number');
-                $user->address = Input::get('address');
-                $user->state = Input::get('state');
-                $user->city = Input::get('city');
-                $user->comment = Input::get('comment');
-                if ($request->password) {
-                    $user->password = Hash::make(Input::get('password'));
+            try{
+                DB::transaction(function () use ($user, $request) {
+                    $user->name = $request->name;
+                    $user->last_name = $request->last_name;
+                    $user->email = $request->email;
+                    $user->username = $request->email;
+                    $user->contact_number = $request->contact_number;
+                    $user->address = $request->address;
+                    $user->state = $request->state;
+                    $user->city = $request->city;
+                    $user->comment = $request->comment;
+                    if ($request->password) {
+                        $user->password = Hash::make($request->password);
+                    }
+                    $user->roles()->detach();
+                    $user->assignRole($request->userrole);
+                    $user->save();
+                });
+                return $this->responseSuccess(['message'=>'User updated successfully']);
+            } catch (Exception $e){
+                if (config('app.debug')) {
+                    throw new Exception('Exception::: '.$e->getMessage(), 400);
                 }
-                $user->roles()->detach();
-                $user->assignRole(Input::get('userrole'));
-                $user->save();
-            });
+                throw new Exception('Unable to save the data.', 400);
+            }
         }
 
-        return array(
-            'status' => 'success',
-            'message' => 'User created successfully'
-        );
+        return $this->responseError('User not found', 401);
     }
 
     /**
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return JsonResponse
      */
     public function destroy($id)
     {
-        //
+        $user = User::getByExternalId($id);
+        if ($user){
+            $user->roles()->detach();
+            $user->delete();
+            return $this->responseSuccess(['message'=>'User removed successfully']);
+        }
+        return $this->responseError('Invalid customer', 401);
     }
 }

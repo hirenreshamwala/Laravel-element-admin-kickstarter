@@ -1,5 +1,5 @@
 <template>
-    <div class="container card">
+    <div class="container card" v-loading="loading">
         <el-card class="box-card">
             <div slot="header" class="clearfix">
                 <span class="align-text-baseline-middle">Admin Users</span>
@@ -72,11 +72,12 @@
 </template>
 
 <script>
-    import {fetchList} from '@/api/customer';
+    import {fetchList, destroy} from '@/api/user';
     export default {
         name: "index",
         data(){
         	return {
+                loading: false,
                 search: '',
         		data:{
         		    sort_by: '',
@@ -93,34 +94,21 @@
         },
         methods: {
             loadData(){
-                const self = this;
+                this.loading = true;
                 fetchList({
                     page: this.data.current_page,
                     rows: this.data.per_page,
                     sort: this.data.sort_by,
                     order: this.data.sort_order,
                     s: this.search
-                }).then(function (response) {
-                    self.data.items = response.data.data;
-                    self.data.total = parseInt(response.data.meta.total);
-                    self.data.current_page = parseInt(response.data.meta.current_page);
-                    self.data.per_page = parseInt(response.data.meta.per_page);
+                }).then((response)=>{
+                    this.data.items = response.data;
+                    this.data.total = parseInt(response.meta.total);
+                    this.data.current_page = parseInt(response.meta.current_page);
+                    this.data.per_page = parseInt(response.meta.per_page);
+                }).finally(()=>{
+                    this.loading = false;
                 });
-
-                // axios.get('/admin/user',{
-                //     params:{
-                //         page: this.data.current_page,
-                //         rows: this.data.per_page,
-                //         sort: this.data.sort_by,
-                //         order: this.data.sort_order,
-                //         s: this.search
-                //     }
-                // }).then(function (response) {
-                //     self.data.items = response.data.data;
-                //     self.data.total = parseInt(response.data.meta.total);
-                //     self.data.current_page = parseInt(response.data.meta.current_page);
-                //     self.data.per_page = parseInt(response.data.meta.per_page);
-                // });
             },
             formatter(row, column) {
                 return row.address;
@@ -147,27 +135,28 @@
             },
             handleEdit(index, row){
                 if(this.$auth.hasPermission('users.edit'))
-                    this.$router.push({name: 'edit_user', params: { id: row.id, data: row }});
+                    this.$router.push({name: 'edit_user', params: { id: row.exid, data: row }});
             },
             handleDelete(index, row){
-                const self = this;
-                axios.delete('/admin/user/'+row.id).then(function (response) {
-                    if(response.data.status === 'success'){
-                        self.$message({
+                this.loading = true;
+                destroy(row.exid).then((response) => {
+                    const {success, error, message} = response;
+                    if (success){
+                        this.$message({
                             showClose: true,
-                            message: response.data.message,
+                            message: message || 'Customer removed successfully.',
                             type: 'success'
                         });
-                        self.$router.push({
-                            name: 'user_list'
-                        });
-                    } else if(response.data.status === 'error'){
-                        self.$message({
+                        this.loadData();
+                    } else if (error){
+                        this.$message({
                             showClose: true,
-                            message: response.data.message,
+                            message: message || 'Unable to remove the customer.',
                             type: 'error'
                         });
                     }
+                }).finally(()=>{
+                    this.loading = false;
                 });
             }
 	    }

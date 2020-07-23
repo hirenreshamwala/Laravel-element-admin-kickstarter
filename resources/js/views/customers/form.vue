@@ -1,5 +1,5 @@
 <template>
-    <div class="container">
+    <div class="container" v-loading="loading">
         <el-card class="box-card p-5">
             <el-form ref="form" :rules="rules" :model="form" label-width="120px">
 
@@ -54,39 +54,40 @@
                         </el-form-item>
                     </el-col>
                     <el-col :span="24" :lg="12" :sm="12" :md="12">
-                        <el-form-item label="Confirm Password" class="el-form-item--label-top" prop="cnf_password">
-                            <el-input type="password" v-model="form.cnf_password"></el-input>
+                        <el-form-item label="Confirm Password" class="el-form-item--label-top" prop="password_confirmation">
+                            <el-input type="password" v-model="form.password_confirmation"></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
 
-                <el-form-item>
+                <div class="text-center">
                     <el-button type="primary" @click="onSubmit">{{save_button_text}}</el-button>
                     <el-button @click="onCancel">Cancel</el-button>
-                </el-form-item>
+                </div>
             </el-form>
         </el-card>
     </div>
 </template>
 <script>
+    import {create,update,fetchUser} from '@/api/customer';
     export default {
         data() {
-            var validatePass = (rule, value, callback) => {
-                if(this.form.id){
+            const validatePass = (rule, value, callback) => {
+                if (this.form.id) {
                     callback();
                 } else {
                     if (value === '') {
                         callback(new Error('Please input the password'));
                     } else {
-                        if (this.form.cnf_password !== '') {
-                            this.$refs.form.validateField('cnf_password');
+                        if (this.form.password_confirmation !== '') {
+                            this.$refs.form.validateField('password_confirmation');
                         }
                         callback();
                     }
                 }
 
             };
-            var validatePass2 = (rule, value, callback) => {
+            const validatePass2 = (rule, value, callback) => {
                 if (value !== this.form.password) {
                     callback(new Error('Password don\'t match!'));
                 } else {
@@ -94,9 +95,11 @@
                 }
             };
             return {
+                loading: false,
                 roles: [],
                 form: {
                     id: '',
+                    exid: '',
                     name: '',
                     address: '',
                     contact_number: '',
@@ -108,7 +111,7 @@
                     status: true,
                     comment: '',
                     password: '',
-                    cnf_password: ''
+                    password_confirmation: ''
                 },
                 rules: {
                     name: [
@@ -127,13 +130,21 @@
                     password: [
                         { validator: validatePass, trigger: 'blur' }
                     ],
-                    cnf_password: [
+                    password_confirmation: [
                         { validator: validatePass2, trigger: 'blur' }
                     ],
                 }
             };
         },
+        watch:{
+            email(val){
+                this.form.username = val;
+            }
+        },
         computed: {
+            email(){
+                return this.form.email;
+            },
             save_button_text: function(){
                 return this.form.id ? 'Save' : 'Create';
             }
@@ -144,20 +155,22 @@
                 self.roles = response.data;
             });
             if (this.$route.params.id){
-                console.log(this.$route.params.id);
-                axios.get('/admin/customer/'+this.$route.params.id).then(function (response) {
-                    console.log(response);
-                    self.form.name = response.data.data.name || '';
-                    self.form.last_name = response.data.data.last_name || '';
-                    self.form.username = response.data.data.email || '';
-                    self.form.email = response.data.data.email || '';
-                    self.form.comment = response.data.data.comment || '';
-                    self.form.address = response.data.data.address || '';
-                    self.form.contact_number = response.data.data.contact_number || '';
-                    self.form.state = response.data.data.state || '';
-                    self.form.city = response.data.data.city || '';
-                    self.form.id = response.data.data.id || '';
-                    self.form.userrole = (response.data.data.role && response.data.data.role.name) ? response.data.data.role.name : '';
+                this.loading = true;
+                fetchUser(this.$route.params.id).then((response)=>{
+                    this.form.name = response.data.name || '';
+                    this.form.last_name = response.data.last_name || '';
+                    this.form.username = response.data.email || '';
+                    this.form.email = response.data.email || '';
+                    this.form.comment = response.data.comment || '';
+                    this.form.address = response.data.address || '';
+                    this.form.contact_number = response.data.contact_number || '';
+                    this.form.state = response.data.state || '';
+                    this.form.city = response.data.city || '';
+                    this.form.id = response.data.id || '';
+                    this.form.exid = response.data.exid || '';
+                    this.form.userrole = (response.data.role && response.data.role.name) ? response.data.role.name : '';
+                }).finally(()=>{
+                    this.loading = false;
                 });
             } else {
 
@@ -165,94 +178,23 @@
         },
         methods: {
             onSubmit() {
-                const self = this;
                 this.$refs['form'].validate((valid) => {
                     if (valid) {
-                        if (self.form.id){
-                            axios.put('/admin/customer/'+self.form.id,self.form, {
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                }
-                            }).then(function (response) {
-                                console.log(response);
-                                if(response.data.status === 'success'){
-                                    self.$message({
-                                        showClose: true,
-                                        message: response.data.message,
-                                        type: 'success'
-                                    });
-                                    self.$router.push({name:'list_customer'});
-                                } else if(response.data.status === 'error'){
-                                    self.$message({
-                                        showClose: true,
-                                        message: response.data.message,
-                                        type: 'error'
-                                    });
-                                }
-                            }).catch(error => {
-                                if (error.response && error.response.data) {
-                                    if (error.response.data.errors){
-                                        const errors = error.response.data.errors;
-                                        for(const c in errors){
-                                            if (typeof errors[c] === 'object'){
-                                                for (const d in errors[c]){
-                                                    if(typeof errors[c][d] === 'string'){
-                                                        this.$message.error(errors[c][d]);
-                                                    }
-                                                }
-                                            } else if(typeof errors[c] === 'string'){
-                                                this.$message.error(errors[c]);
-                                            }
-                                        }
-                                    } else if (error.response.data.message){
-                                        this.$message.error(error.response.data.message);
-                                    }
-                                }
+                        if (this.form.id){
+                            this.loading = true;
+                            update(this.form.exid,this.form).then(response=>{
+                                this.$router.push({name:'list_customer'});
+                            }).finally(()=>{
+                                this.loading = false;
                             });
                         } else {
-                            axios.post('/admin/customer',self.form, {
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                }
-                            }).then(function (response) {
-                                console.log(response);
-                                if(response.data.status === 'success'){
-                                    self.$message({
-                                        showClose: true,
-                                        message: response.data.message,
-                                        type: 'success'
-                                    });
-                                    self.$router.push({name:'list_customer'});
-                                } else if(response.data.status === 'error'){
-                                    self.$message({
-                                        showClose: true,
-                                        message: response.data.message,
-                                        type: 'error'
-                                    });
-                                }
-                            }).catch(error => {
-                                if (error.response && error.response.data) {
-                                    if (error.response.data.errors){
-                                        const errors = error.response.data.errors;
-                                        for(const c in errors){
-                                            if (typeof errors[c] === 'object'){
-                                                for (const d in errors[c]){
-                                                    if(typeof errors[c][d] === 'string'){
-                                                        this.$message.error(errors[c][d]);
-                                                    }
-                                                }
-                                            } else if(typeof errors[c] === 'string'){
-                                                this.$message.error(errors[c]);
-                                            }
-                                        }
-                                    } else if (error.response.data.message){
-                                        this.$message.error(error.response.data.message);
-                                    }
-                                }
+                            this.loading = true;
+                            create(this.form).then(response=>{
+                                this.$router.push({name:'list_customer'});
+                            }).finally(()=>{
+                                this.loading = false;
                             });
                         }
-
-
                     } else {
                         console.log('error submit!!');
                         return false;

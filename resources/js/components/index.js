@@ -12,6 +12,6 @@ requireComponent.keys().forEach(fileName => {
   const componentName = upperFirst(
     camelCase(fileName.replace(/^\.\//, '').replace(/\.\w+$/, ''))
   )
-console.log(componentName);
+
   Vue.component(componentName, componentConfig.default || componentConfig)
 })
