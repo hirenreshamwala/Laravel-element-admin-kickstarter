@@ -73,51 +73,21 @@ function pr($data){
     echo '<pre>'; print_r($data); echo '</pre>';
 }
 
-function getImageResize(){
-    $filePath = implode('/',func_get_args());
-    $path = storage_path('app/public/'.$filePath);
-
-    if (file_exists($path)){
-        $img = Image::make($path);
-
-        $pos = stripos(strtolower($img->mime()),'svg');
-        if (!$pos){
-            $w = $img->width();
-            $h = $img->height();
-
-            $width = Input::get("w",$w);
-            $height = Input::get("h",$h);
-
-            $ratio = min($width/$w, $height/$h);
-
-            $newWidth = $w*$ratio;
-            $newHeight = $h*$ratio;
-
-            $img->resize($newWidth,$newHeight);
-
-            return $img->response();
-        } else {
-            return response(file_get_contents($path))
-                ->header('Content-Type', 'image/svg+xml');
-        }
-    }
-}
-function createJobZip($jobId){
-    $path = storage_path('app/public/projects/'.$jobId.'/');
+function createZip($path){
 
     if (file_exists($path) && is_dir($path)){
-        $files = Storage::files('public/projects/'.$jobId);
+        $files = Storage::files($path);
 
         $dirName = Str::random(16);
-        $zip_file = storage_path('app').DIRECTORY_SEPARATOR.'public/downloads/jobs/'.$dirName.'.zip';
+        $zip_file = storage_path('app').DIRECTORY_SEPARATOR.'public/archive/'.$dirName.'.zip';
 
         // Initializing PHP class
         $zip = new \ZipArchive();
         $zip->open($zip_file, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
         foreach ($files as $file){
-            $tmp = explode('/',$file);
-            $f = array_pop($tmp);
-            $zip->addFile(storage_path('app'.DIRECTORY_SEPARATOR.$file), $dirName.DIRECTORY_SEPARATOR.$jobId.DIRECTORY_SEPARATOR.$f);
+//            $tmp = explode('/',$file);
+//            $f = array_pop($tmp);
+            $zip->addFile($file);
             $zip->close();
         }
         return $zip_file;

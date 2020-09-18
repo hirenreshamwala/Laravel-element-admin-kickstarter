@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -15,9 +17,6 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/user-auth', 'LoginController@showLoginForm')->name('auth-user');
-Route::post('/user-auth', 'LoginController@login')->name('auth-user');
-
-Auth::routes();
-
-Route::get('/home', 'HomeController@index')->name('home');
+Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
+    return view('dashboard');
+})->name('dashboard');

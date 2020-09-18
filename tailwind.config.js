@@ -1,17 +1,19 @@
-// tailwind.config.js
+const defaultTheme = require('tailwindcss/defaultTheme');
+
 module.exports = {
-  theme: {
-    colors: {
-        transparent: 'transparent',
-        black: 'var(--color-black)',
-        white: 'var(--color-white)',
-        primary: {
-            'primary': 'var(--color-primary)',
+    purge: ['./storage/framework/views/*.php', './resources/views/**/*.blade.php'],
+
+    theme: {
+        extend: {
+            fontFamily: {
+                sans: ['Nunito', ...defaultTheme.fontFamily.sans],
+            },
         },
-    }
-  },
-    extend: {
     },
-  variants: {},
-  plugins: [],
-}
+
+    variants: {
+        opacity: ['responsive', 'hover', 'focus', 'disabled'],
+    },
+
+    plugins: [require('@tailwindcss/ui')],
+};

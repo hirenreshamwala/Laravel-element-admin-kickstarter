@@ -174,7 +174,13 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+        App\Providers\FortifyServiceProvider::class,
+        App\Providers\JetstreamServiceProvider::class,
 
+        Spatie\Permission\PermissionServiceProvider::class,
+        Nwidart\Modules\LaravelModulesServiceProvider::class,
+
+        XT\LaravelBridge\ServiceProvider::class,
     ],
 
     /*
@@ -230,6 +236,4 @@ return [
     ],
 
     'vue_encryption_key' => 'rUhLtJmeVSR3KBBNwY7Q7nzheTbsEDuVKPkFNTLT9H3pTTqaf9QAKhGMfbs5ZL4j',
-
-    'VERIFY_EMAIL' => env('VERIFY_EMAIL', false),
 ];

@@ -1,0 +1,35 @@
+{
+    "name": "xt/vue-laravel-bridge",
+    "type": "library",
+    "description": "The Laravel vue bridge",
+    "keywords": ["laravel", "vue", "bridge"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Hiren",
+            "email": "hiren.reshamwala@gmail.com",
+            "homepage": "https://xiontechnologies.in"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "XT\\LaravelBridge\\": "src"
+        },
+        "files": [
+            "./helpers.php"
+        ]
+    },
+    "require": {
+        "laravel/framework": "^5.4|^6.0|^7.0|^8.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "~3.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "XT\\LaravelBridge\\ServiceProvider"
+            ]
+        }
+    }
+}

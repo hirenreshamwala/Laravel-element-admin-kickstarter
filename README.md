@@ -1,19 +1,10 @@
-<p align="center"><img src="https://res.cloudinary.com/dtfbvvkyp/image/upload/v1566331377/laravel-logolockup-cmyk-red.svg" width="400"></p>
-
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
-
-
 ## Topics
 1. [Introduction](#introduction)
-2. [Documentation](#documentation)
-3. [Requirements](#requirements)
-4. [Installation & Configuration](#installation-and-configuration)
-5. [License](#license)
+2. [Features](#features)
+3. [Documentation](#documentation)
+4. [Requirements](#requirements)
+5. [Installation & Configuration](#installation-and-configuration)
+6. [License](#license)
 
 ### Introduction
 
@@ -23,6 +14,15 @@ a progressive Javascript framework and [Element UI](https://element.eleme.io).
 
 **Laravel-element-admin-kickstarter can help you to cut down your time in building admin panel from the scratch**
 
+### Features
+    1. Laravel 8 with jetstream (Livewire and tailwindcss)
+    2. Multiple authentication admin and customer
+    3. Module base admin (Completely separate from default website) 
+    4. Redy made admin panel including 
+        - Admin management
+        - Admin Role management
+        - Customer management
+    
 
 ### Documentation
 
