@@ -12,8 +12,8 @@ export default class Auth {
 	}
 
     roles() {
-        // return this.user.roles.map(role => role.name);
-        return this.user.roles.map(role => role);
+        return this.user.roles.map(role => role.name);
+        // return this.user.roles.map(role => role);
     }
 
     hasAnyRole(){
@@ -21,8 +21,8 @@ export default class Auth {
     }
 
     permissions() {
-        // return this.user.permissions.map(permission => permission.name);
-        return this.user.permissions;
+        return this.user.permissions.map(permission => permission.name);
+        // return this.user.permissions;
     }
 
     hasPermission(permission){

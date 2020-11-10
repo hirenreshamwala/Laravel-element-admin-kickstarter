@@ -7,14 +7,27 @@ import { getInfo } from '@/api/user'
  * @param route
  */
 function hasPermission(roles, permissions, route) {
-    if(roles.indexOf('Super Admin') !== '-1'){
+    if(roles.indexOf('Super Admin') !== -1){
         return true;
     }
-    if (route.meta && route.meta.roles) {
-        if(route.meta.permission && permissions.indexOf(route.meta.permission) === -1){
-            return false
-        } else {
+    if (route.children) {
+        let countChildren = 0;
+        for (let i = 0; i < route.children.length; i++) {
+            if (hasPermission(roles, permissions, route.children[i])){
+                countChildren++;
+            }
+        }
+        if (countChildren === 0)
+            return false;
+    }
+    if (route.meta && route.meta.permission) {
+
+        if(route.meta.permission && permissions.indexOf(route.meta.permission) !== -1){
+            return true
+        } else if(route.meta.roles){
             return roles.some(role => route.meta.roles.includes(role))
+        } else {
+            return false
         }
     } else if(route.meta && route.meta.permission && permissions.indexOf(route.meta.permission) === -1){
         return false
@@ -29,55 +42,55 @@ function hasPermission(roles, permissions, route) {
  * @param roles
  */
 export function filterAsyncRoutes(routes, roles, permissions) {
-  const res = []
-  routes.forEach(route => {
-    const tmp = { ...route }
-    if (hasPermission(roles, permissions, tmp)) {
-      if (tmp.children) {
-        tmp.children = filterAsyncRoutes(tmp.children, roles, permissions)
-      }
-      res.push(tmp)
-    }
-  })
+    const res = []
+    routes.forEach(route => {
+        const tmp = { ...route }
+        if (hasPermission(roles, permissions, tmp)) {
+            if (tmp.children) {
+                tmp.children = filterAsyncRoutes(tmp.children, roles, permissions)
+            }
+            res.push(tmp)
+        }
+    })
 
-  return res
+    return res
 }
 
 const state = {
-  routes: [],
-  addRoutes: []
+    routes: [],
+    addRoutes: []
 }
 
 const mutations = {
-  SET_ROUTES: (state, routes) => {
-    state.addRoutes = routes
-    state.routes = constantRoutes.concat(routes)
-  }
+    SET_ROUTES: (state, routes) => {
+        state.addRoutes = routes
+        state.routes = constantRoutes.concat(routes)
+    }
 }
 
 const actions = {
-  generateRoutes({ commit }, roles) {
-    return new Promise(resolve => {
-        let accessedRoutes
-        getInfo(state.token).then(response => {
-            const {data} = response
+    generateRoutes({ commit }, roles) {
+        return new Promise(resolve => {
+            let accessedRoutes
+            getInfo(state.token).then(response => {
+                const {data} = response
 
-            if (roles.includes('admin')) {
-                accessedRoutes = asyncRoutes || []
-            } else {
-                accessedRoutes = filterAsyncRoutes(asyncRoutes, roles, data.permissions)
-            }
-            commit('SET_ROUTES', accessedRoutes)
-            resolve(accessedRoutes)
-        });
+                if (roles.includes('admin')) {
+                    accessedRoutes = asyncRoutes || []
+                } else {
+                    accessedRoutes = filterAsyncRoutes(asyncRoutes, roles, data.permissions)
+                }
+                commit('SET_ROUTES', accessedRoutes)
+                resolve(accessedRoutes)
+            });
 
-    })
-  }
+        })
+    }
 }
 
 export default {
-  namespaced: true,
-  state,
-  mutations,
-  actions
+    namespaced: true,
+    state,
+    mutations,
+    actions
 }

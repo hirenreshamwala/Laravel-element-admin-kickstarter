@@ -95,7 +95,7 @@ export const asyncRoutes = [
         path: '/users',
         component: Layout,
         redirect: '/list',
-        meta: { title: 'Admin Users', affix: true, icon: 'peoples' },
+        meta: { title: 'Admin Users', affix: true, icon: 'peoples', permission:'user.list' },
         children: [
             {
                 path: 'roles',
@@ -121,20 +121,20 @@ export const asyncRoutes = [
                 path: 'list',
                 component: () => import('@/views/users/index'),
                 name: 'user_list',
-                meta: { title: 'All Users', affix: true, permission:'users.list' }
+                meta: { title: 'All Users', affix: true, permission:'user.list' }
             },
             {
                 path: 'add',
                 component: () => import('@/views/users/form'),
                 name: 'Add User',
-                meta: { title: 'Add User', affix: true, permission:'users.add' }
+                meta: { title: 'Add User', affix: true, permission:'user.add' }
             },
             {
                 path: 'edit/:id',
                 component: () => import('@/views/users/form'),
                 name: 'edit_user',
                 hidden: true,
-                meta: { title: 'Add User', affix: false, permission:'users.update' }
+                meta: { title: 'Add User', affix: false, permission:'user.update' }
             },
         ]
     },
@@ -142,7 +142,7 @@ export const asyncRoutes = [
         path: '/customers',
         component: Layout,
         redirect: '/list',
-        meta: { title: 'Customers', affix: true, icon: 'people' },
+        meta: { title: 'Customers', affix: true, icon: 'people', permission:'customer.list' },
         children: [
             {
                 path: 'list',
